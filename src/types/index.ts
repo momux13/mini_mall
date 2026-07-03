@@ -23,7 +23,7 @@ export const productSchema = z.object({
   description: z.string().min(1, "请输入商品描述"),
   price: z.coerce.number().min(1, "价格必须大于 0"),
   stock: z.coerce.number().min(0, "库存不能为负数"),
-  imageUrl: z.string().optional().or(z.literal("")),
+  imageUrl: z.string().url("请输入有效的图片链接").optional().or(z.literal("")),
   categoryId: z.string().min(1, "请选择分类"),
   isPublished: z.coerce.boolean().optional(),
 });

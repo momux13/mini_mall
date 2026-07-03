@@ -15,6 +15,11 @@ export async function addToCartAction(
     return { success: false, error: "请先登录" };
   }
 
+  // 校验数量合法性，防止负数/零值注入
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return { success: false, error: "数量必须为正整数" };
+  }
+
   // 检查商品是否存在且已上架
   const product = await prisma.product.findUnique({
     where: { id: productId },

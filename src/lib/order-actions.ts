@@ -118,6 +118,15 @@ export async function updateOrderStatusAction(
     return { success: false, error: "无权限操作" };
   }
 
+  // 管理员专属操作：发货(SHIPPED)、送达(DELIVERED) 禁止用户自行操作
+  const adminOnlyStatuses: OrderStatus[] = ["SHIPPED", "DELIVERED"];
+  if (
+    adminOnlyStatuses.includes(newStatus as OrderStatus) &&
+    session.role !== "ADMIN"
+  ) {
+    return { success: false, error: "无权限操作" };
+  }
+
   // 校验状态流转合法性
   const currentStatus = order.status as OrderStatus;
   const allowedTransitions =

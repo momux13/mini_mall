@@ -19,42 +19,58 @@ src/
 ├── app/
 │   ├── layout.tsx                # 根布局
 │   ├── globals.css               # @import "tailwindcss"
+│   ├── not-found.tsx             # 404 页面
 │   ├── (store)/                  # 商城主布局（Header+Footer）
 │   │   ├── layout.tsx
-│   │   ├── page.tsx              # 首页
+│   │   ├── page.tsx              # 首页（商品展示 + 分类筛选）
+│   │   ├── error.tsx             # 商城错误边界（Client Component）
 │   │   ├── products/             # 商品列表 + [slug] 详情
+│   │   │   └── loading.tsx       # 商品列表骨架屏
 │   │   ├── cart/                 # 购物车
+│   │   │   └── loading.tsx       # 购物车骨架屏
 │   │   ├── checkout/             # 结算
 │   │   ├── orders/               # 订单列表 + [id] 详情
-│   │   └── profile/              # 个人中心
+│   │   │   ├── loading.tsx       # 订单列表骨架屏
+│   │   │   └── [id]/PayButton.tsx # 模拟支付按钮（Client）
+│   │   └── profile/              # 个人中心（查看/修改资料）
+│   │       └── ProfileForm.tsx   # 个人资料表单（Client）
 │   ├── (auth)/                   # 认证布局（无 Header，居中卡片）
 │   │   ├── login/
 │   │   └── register/
 │   └── admin/                    # 后台布局（左侧 Sidebar）
+│       ├── layout.tsx
+│       ├── page.tsx              # 后台首页仪表盘
+│       ├── error.tsx             # 后台错误边界（Client Component）
 │       ├── products/             # 列表 + new + [id]/edit
+│       │   ├── DeleteProductButton.tsx
+│       │   └── [id]/edit/page.tsx → ProductForm
 │       ├── categories/           # 列表 + new
-│       └── orders/               # 列表 + [id]
+│       │   ├── DeleteCategoryButton.tsx
+│       │   └── new/CategoryForm.tsx
+│       └── orders/               # 列表 + [id] 详情
+│           └── [id]/AdminStatusUpdate.tsx  # 管理员状态变更（Client）
 ├── components/
-│   ├── ui/                       # Button, Input, Select, Card, Badge, Modal, DataTable, Pagination, EmptyState, Loading
-│   ├── layout/                   # Header, Footer, AdminSidebar
-│   ├── products/                 # ProductCard, ProductGrid, ProductDetail, AddToCartButton, SearchBar, CategoryFilter
+│   ├── ui/                       # EmptyState, Loading, Pagination
+│   ├── layout/                   # Header, Footer, AdminSidebar, LogoutButton
+│   ├── products/                 # ProductCard, ProductGrid, ProductForm, ProductImage, AddToCartButton, SearchBar, CategoryFilter
 │   ├── cart/                     # CartItemRow, CartSummary, CartIcon
 │   ├── checkout/                 # CheckoutForm
 │   ├── orders/                   # OrderCard, OrderItems, OrderStatusBadge
 │   └── auth/                     # LoginForm, RegisterForm
 ├── lib/
 │   ├── prisma.ts                 # PrismaClient 单例（adapter 模式）
-│   ├── auth.ts                   # getServerSession()
+│   ├── auth.ts                   # JWT 签发/验证 + Session 管理 + JWT_SECRET 启动校验
 │   ├── auth-actions.ts           # loginAction, registerAction, logoutAction
-│   ├── cart-actions.ts           # addToCart, updateQuantity, remove
-│   ├── order-actions.ts          # createOrder, updateOrderStatus
+│   ├── cart-actions.ts           # addToCart, updateQuantity, remove（含数量校验）
+│   ├── order-actions.ts          # createOrder, updateOrderStatus（含管理员权限分级）
 │   ├── product-actions.ts        # createProduct, updateProduct, deleteProduct
 │   ├── category-actions.ts       # createCategory, updateCategory, deleteCategory
-│   ├── utils.ts                  # formatPrice, slugify, cn, generateOrderNumber
-│   └── constants.ts              # ORDER_STATUS, ORDER_STATUS_TRANSITIONS, ROLES, ITEMS_PER_PAGE
+│   ├── profile-actions.ts        # updateProfileAction
+│   ├── utils.ts                  # formatPrice(分→¥), slugify, cn, generateOrderNumber
+│   └── constants.ts              # ORDER_STATUS, ORDER_STATUS_TRANSITIONS, ROLES, ITEMS_PER_PAGE, CATEGORY_EMOJI
 ├── middleware.ts                  # JWT 验证 + 路由保护
 └── types/
-    └── index.ts                  # zod schema + ActionResult 类型
+    └── index.ts                  # zod schema（login/register/product/category/checkout）+ ActionResult 类型
 ```
 
 ## 数据库 Schema
@@ -77,6 +93,8 @@ PENDING → PAID → SHIPPED → DELIVERED
 
 定义在 `src/lib/constants.ts` 的 `ORDER_STATUS_TRANSITIONS` 中，更新状态前必须校验合法性。
 
+**权限限制：** `SHIPPED` 和 `DELIVERED` 仅管理员可操作，普通用户只能执行 `PENDING → PAID` 和 `CANCELLED`（详见 `updateOrderStatusAction`）。
+
 ## 核心架构原则
 
 ### RSC vs Client 组件
@@ -85,6 +103,12 @@ PENDING → PAID → SHIPPED → DELIVERED
 - **Client：** 仅在有事件处理/`useState`/`useEffect`/浏览器 API 时加 `"use client"`
   - 所有表单组件、按钮交互、SearchBar、CartIcon 等
   - `useActionState` + Server Action 是表单调用的标准模式
+
+### 加载与错误处理
+
+- **`loading.tsx`** — Next.js 自动按路由边界包裹 Suspense，页面加载时显示骨架屏
+- **`error.tsx`** — 错误边界（Client Component），捕获渲染错误，显示友好提示 + 重试按钮
+- **`not-found.tsx`** — 全局 404 页面
 
 ### 数据变更：Server Actions Only
 
@@ -103,6 +127,7 @@ Action 内部调用 `revalidatePath()` 刷新缓存。
 
 - **库：** `jose`（同时兼容 Edge middleware 和 Node.js RSC）
 - **Session 获取：** `getServerSession()` 读取 cookie 中的 JWT，解密返回 `{ id, email, name, role }`
+- **JWT_SECRET 启动校验：** `auth.ts` 模块加载时检查 `JWT_SECRET` 环境变量——拒绝未设置、含 `change-in-production` 占位符、长度 < 32 字符的弱密钥
 - **路由保护：** `middleware.ts` 验证 JWT
   - `/cart`、`/checkout`、`/orders`、`/profile` 需登录
   - `/admin/*` 需 `role === "ADMIN"`
@@ -112,7 +137,26 @@ Action 内部调用 `revalidatePath()` 刷新缓存。
 
 - 纯 DB 持久化，需登录
 - `addToCartAction` 使用 `prisma.cartItem.upsert()`，同商品存在则 increment 数量
+- **数量校验：** `addToCartAction` 强制 `Number.isInteger(quantity) && quantity >= 1`，拒绝负数/零值/小数
 - 下单后清空购物车
+
+### 输入校验（Zod）
+
+- 所有用户输入通过 zod schema 校验：
+  - `loginSchema` / `registerSchema` — 认证表单
+  - `productSchema` — 商品 CRUD（`imageUrl` 要求 `z.string().url()`）
+  - `categorySchema` — 分类 CRUD
+  - `checkoutSchema` — 结算表单（已定义，待 Server Action 中使用）
+- Server Action 中应使用 schema 校验后再写入数据库，不要仅依赖客户端校验
+
+### 安全加固
+
+- `bcrypt` 12 round 密码哈希
+- httpOnly Cookie 防止 XSS 窃取 token
+- Cookie `sameSite: "lax"` + Server Actions 强制 POST 防止 CSRF
+- Admin 专属 Server Action（product/category CRUD、SHIPPED/DELIVERED 状态变更）强制校验 `session.role !== "ADMIN"`
+- 所有购物车/订单操作校验 `item.userId === session.id` 防止 IDOR
+- JWT 启动时检查弱密钥占位符，防止生产环境使用默认密钥
 
 ## 开发命令
 

@@ -7,6 +7,12 @@ const secret = process.env.JWT_SECRET;
 if (!secret) {
   throw new Error("JWT_SECRET 环境变量未设置，请检查 .env 文件");
 }
+// 拒绝弱密钥/占位符，防止生产环境中使用默认值导致 JWT 可被伪造
+if (secret.includes("change-in-production") || secret.length < 32) {
+  throw new Error(
+    "JWT_SECRET 不安全：请使用强随机密钥（运行: openssl rand -base64 48 生成）"
+  );
+}
 const JWT_SECRET = new TextEncoder().encode(secret);
 
 const COOKIE_NAME = "token";
