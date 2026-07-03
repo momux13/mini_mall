@@ -23,4 +23,14 @@ export const ROLES = {
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
-export const ITEMS_PER_PAGE = 12;
+export const ITEMS_PER_PAGE = 9;
+
+/** 分类 slug 到 emoji 的映射，供页面和组件统一使用 */
+export const CATEGORY_EMOJI: Record<string, string> = {
+  electronics: "💻",
+  clothing: "👕",
+  food: "🍜",
+  books: "📚",
+  home: "🏠",
+  sports: "⚽",
+};

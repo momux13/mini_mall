@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { generateOrderNumber } from "../src/lib/utils";
 
-const adapter = new PrismaBetterSqlite3({ url: "file:./dev.db" });
+const adapter = new PrismaBetterSqlite3({ url: "file:./prisma/dev.db" });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
@@ -95,7 +95,6 @@ async function main() {
     const product = await prisma.product.create({
       data: {
         ...rest,
-        imageUrl: `/images/${p.slug}.jpg`,
         isPublished: true,
         categoryId: categoryMap.get(catSlug)!,
       },
