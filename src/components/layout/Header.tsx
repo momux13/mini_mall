@@ -37,9 +37,12 @@ export default async function Header() {
           {session ? (
             <>
               <CartIcon />
-              <span className="text-sm text-gray-600">
+              <Link
+                href="/profile"
+                className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
+              >
                 {session.name}
-              </span>
+              </Link>
               {session.role === "ADMIN" && (
                 <Link
                   href="/admin"
