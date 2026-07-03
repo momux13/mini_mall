@@ -12,7 +12,7 @@ interface ProductCardProps {
 }
 
 /** 根据名称生成稳定的背景色 */
-function getColorClass(name: string): string {
+export function getColorClass(name: string): string {
   const colors = [
     "from-blue-100 to-indigo-100 text-blue-500",
     "from-pink-100 to-rose-100 text-pink-500",

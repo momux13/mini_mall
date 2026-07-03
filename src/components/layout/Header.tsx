@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getServerSession } from "@/lib/auth";
 import LogoutButton from "./LogoutButton";
+import CartIcon from "@/components/cart/CartIcon";
 
 /** 商城头部导航——根据登录状态显示不同菜单 */
 export default async function Header() {
@@ -35,6 +36,7 @@ export default async function Header() {
         <div className="flex items-center gap-3">
           {session ? (
             <>
+              <CartIcon />
               <span className="text-sm text-gray-600">
                 {session.name}
               </span>

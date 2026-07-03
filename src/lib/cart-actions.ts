@@ -23,6 +23,18 @@ export async function addToCartAction(
     return { success: false, error: "商品不存在或已下架" };
   }
 
+  // 检查库存
+  const existingCartItem = await prisma.cartItem.findUnique({
+    where: { userId_productId: { userId: session.id, productId } },
+  });
+  const currentQty = existingCartItem?.quantity ?? 0;
+  if (currentQty + quantity > product.stock) {
+    return {
+      success: false,
+      error: `库存不足，当前库存 ${product.stock} 件，购物车已有 ${currentQty} 件`,
+    };
+  }
+
   // upsert：同商品存在则 increment 数量
   await prisma.cartItem.upsert({
     where: {
